@@ -1,4 +1,3 @@
-Salvar Q table sempre ( reusar )
 E-Greedy Search
 Alfa : decrescente
 EXplorar várias plataformas iniciais

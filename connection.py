@@ -27,6 +27,8 @@ def get_state_reward(s , act):
         data = s.recv(1024).decode()
         try:
             data = eval(data)
+            print(data)
+
             data_recv = True
         except:
             data_recv = False
