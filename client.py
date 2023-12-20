@@ -19,15 +19,12 @@ class AgenteQLearning:
         # Gerar um número aleatório para decidir entre explorar e explorar a política aprendida
         exploracao = randint(0, 10)
         
-        # Converter o estado binário para um número inteiro
         estado_agente = int(estado, 2)
 
-        # Se o valor de exploração for maior do que epsilon*10, escolher a ação com maior valor Q no estado atual
         if exploracao > epsilon * 10:
             valor_estado_agente = matriz[estado_agente]
             valor_acao = max(valor_estado_agente.esquerda, valor_estado_agente.direita, valor_estado_agente.pulo)
 
-            # Determinar qual ação tem o maior valor Q e retornar essa ação
             if valor_acao == valor_estado_agente.esquerda:
                 return "left"
             elif valor_acao == valor_estado_agente.direita:
@@ -42,7 +39,6 @@ class AgenteQLearning:
 
         q_max = 0
         
-        # Conversão dos estados binários para números inteiros
         estado_agente = int(estado, 2)
         estado_ultimo_agente = int(ultimo_estado, 2)
 
@@ -58,7 +54,6 @@ class AgenteQLearning:
         else:
             matriz[estado_ultimo_agente].direita += alfa * ((recompensa + gamma * q_max) - matriz[estado_ultimo_agente].direita)
 
-        # Retorno da matriz Q atualizada
         return matriz
 
 
