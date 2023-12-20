@@ -1,71 +1,104 @@
-import numpy as np
-import random
-import time
-from collections import defaultdict
+from random import randint
 from connection import connect, get_state_reward
 
-# Defina os parâmetros do Q-Learning
-alpha = 0.1  # Taxa de aprendizado
-gamma = 0.9  # Fator de desconto
-epsilon = 0.1  # Exploração vs Exploração
+epsilon = 0.7
+alfa = 0.42 # Coeficiente de aprendizado
+gamma = 0.3 # Fator de desconto
 
-# Defina o número de ações possíveis
-actions = ["left", "right", "jump"]
+class Estado:
+    def __init__(self, esquerda: str, direita: str, pulo: str):
+        self.esquerda = float(esquerda)
+        self.direita = float(direita)
+        self.pulo = float(pulo)
 
-# Função para escolher uma ação com base no estado atual e na política epsilon-greedy
-def choose_action(q_values, state, actions):
-    if random.uniform(0, 1) < epsilon:
-        return random.choice(actions)
-    else:
-        return max(actions, key=lambda a: q_values[state][a])
 
-# Função para atualizar os valores Q com base na recompensa e na próxima ação
-def update_q_values(q_values, state, action, reward, next_state, actions):
-    max_next_q = max(q_values[next_state].values()) if next_state in q_values else 0
-    q_values[state][action] += alpha * (reward + gamma * max_next_q - q_values[state][action])
+class AgenteQLearning:
+    ACOES = ["left", "right", "jump"]
 
-# Função principal para executar o algoritmo Q-Learning
-def q_learning(port, actions):
-    # Inicialize os valores Q para cada par estado-ação
-    q_values = defaultdict(lambda: {a: 0 for a in actions})
+    def obter_acao(self, matriz: list[Estado], estado: str) -> str:
+        # Gerar um número aleatório para decidir entre explorar e explorar a política aprendida
+        exploracao = randint(0, 10)
+        
+        # Converter o estado binário para um número inteiro
+        estado_agente = int(estado, 2)
 
-    # Conecte-se ao servidor
-    socket_conn = connect(port)
+        # Se o valor de exploração for maior do que epsilon*10, escolher a ação com maior valor Q no estado atual
+        if exploracao > epsilon * 10:
+            valor_estado_agente = matriz[estado_agente]
+            valor_acao = max(valor_estado_agente.esquerda, valor_estado_agente.direita, valor_estado_agente.pulo)
 
-    # Laço principal de treinamento
-    while True:
-        try:
-            # Obtenha o estado atual e a recompensa do jogo
-            action = choose_action(q_values, 000, actions[2])
-            state, reward = get_state_reward(socket_conn, action)
+            # Determinar qual ação tem o maior valor Q e retornar essa ação
+            if valor_acao == valor_estado_agente.esquerda:
+                return "left"
+            elif valor_acao == valor_estado_agente.direita:
+                return "right"
+            return "jump"
 
-            # Se estado ou recompensa forem inválidos, continue para a próxima iteração
-            if state is None or reward is None:
-                print("Recebido estado ou recompensa inválidos. Verifique a resposta do servidor.")
-                continue
+        # Se o valor de exploração for epsilon*10 ou menor, escolher uma ação aleatória entre left, right e jump
+        return AgenteQLearning.ACOES[randint(0, 2)]
 
-            # Escolha uma ação com base na política epsilon-greedy
-            action = choose_action(q_values, state, actions)
 
-            # Execute a ação e obtenha o próximo estado e recompensa
-            next_state, next_reward = get_state_reward(socket_conn, action)
+    def q_learning(self, matriz: list[Estado], estado: str, ultimo_estado: str, acao: str, recompensa: int) -> list[Estado]:
 
-            # Atualize os valores Q com base na recompensa e na próxima ação
-            update_q_values(q_values, state, action, reward, next_state, actions)
+        q_max = 0
+        
+        # Conversão dos estados binários para números inteiros
+        estado_agente = int(estado, 2)
+        estado_ultimo_agente = int(ultimo_estado, 2)
 
-            # Salve a Q-table em um arquivo .txt (opcional)
-            with open("q_table.txt", "w") as f:
-                for state, actions in sorted(q_values.items()):
-                    f.write(f"{state}: {actions}\n")
+        # Obtenção dos valores Q máximos para o estado atual
+        linha_estado = matriz[estado_agente]
+        q_max = max(linha_estado.esquerda, linha_estado.direita, linha_estado.pulo)
 
-            # Aguarde um momento antes da próxima iteração (pode ser ajustado)
-            time.sleep(0.1)
+        # Atualização da matriz Q com base na ação tomada, recompensa e valor Q máximo
+        if acao == "jump":
+            matriz[estado_ultimo_agente].pulo += alfa * ((recompensa + gamma * q_max) - matriz[estado_ultimo_agente].pulo)
+        elif acao == "left":
+            matriz[estado_ultimo_agente].esquerda += alfa * ((recompensa + gamma * q_max) - matriz[estado_ultimo_agente].esquerda)
+        else:
+            matriz[estado_ultimo_agente].direita += alfa * ((recompensa + gamma * q_max) - matriz[estado_ultimo_agente].direita)
 
-        except Exception as e:
-            print(f"Erro durante o treinamento: {e}")
-            break
+        # Retorno da matriz Q atualizada
+        return matriz
 
+
+class Matriz:
+    RESULTADO = './resultado.txt'
+
+    def obter_matriz(self):
+        with open(Matriz.RESULTADO, 'r') as arquivo:
+            texto = arquivo.readlines()
+            estados = [linha.strip().split() for linha in texto]
+            matriz = [Estado(estado[0], estado[1], estado[2]) for estado in estados]
+            return matriz
+
+    def atualizar_matriz(self, matriz: list[Estado]):
+        with open(Matriz.RESULTADO, "w") as arquivo:
+            novos_estados = ""
+            for estado in matriz:
+                novos_estados += f'{estado.esquerda:.6f} {estado.direita:.6f} {estado.pulo:.6f}\n'
+            arquivo.write(novos_estados)
+
+class Amongois:
+    def __init__(self):
+        self.__carregador_matriz = Matriz()
+        self.__agente = AgenteQLearning()
+        self.__socket = connect(2037)
+
+    def iniciar_jogo(self):
+        matriz = self.__carregador_matriz.obter_matriz()
+        ultimo_estado = '0000000'
+
+        while True:
+            acao = self.__agente.obter_acao(matriz, ultimo_estado)
+            estado, recompensa = get_state_reward(self.__socket, acao)
+            matriz = self.__agente.q_learning(matriz, estado, ultimo_estado, acao, recompensa)
+            if recompensa == 300 :
+                break
+            ultimo_estado = estado
+            self.__carregador_matriz.atualizar_matriz(matriz)
+
+# Cliente.py
 if __name__ == "__main__":
-    # Substitua a porta abaixo pela porta correta do seu jogo
-    porta_do_jogo = 2037
-    q_learning(porta_do_jogo, actions)
+    amongois = Amongois()
+    amongois.iniciar_jogo()
