@@ -1,9 +1,9 @@
 from random import randint
 from connection import connect, get_state_reward
 
-epsilon = 0.7
-alfa = 0.42 # Coeficiente de aprendizado
-gamma = 0.3 # Fator de desconto
+epsilon = 0.99
+alfa = 0.2 # Coeficiente de aprendizado
+gamma = 0.9 # Fator de desconto
 
 class Estado:
     def __init__(self, esquerda: str, direita: str, pulo: str):
@@ -36,7 +36,6 @@ class AgenteQLearning:
 
 
     def q_learning(self, matriz: list[Estado], estado: str, ultimo_estado: str, acao: str, recompensa: int) -> list[Estado]:
-
         q_max = 0
         
         estado_agente = int(estado, 2)
@@ -48,11 +47,11 @@ class AgenteQLearning:
 
         # Atualização da matriz Q com base na ação tomada, recompensa e valor Q máximo
         if acao == "jump":
-            matriz[estado_ultimo_agente].pulo += alfa * ((recompensa + gamma * q_max) - matriz[estado_ultimo_agente].pulo)
+            matriz[estado_ultimo_agente].pulo += alfa * ((recompensa + (gamma * q_max)) - matriz[estado_ultimo_agente].pulo)
         elif acao == "left":
-            matriz[estado_ultimo_agente].esquerda += alfa * ((recompensa + gamma * q_max) - matriz[estado_ultimo_agente].esquerda)
+            matriz[estado_ultimo_agente].esquerda += alfa * ((recompensa + (gamma * q_max)) - matriz[estado_ultimo_agente].esquerda)
         else:
-            matriz[estado_ultimo_agente].direita += alfa * ((recompensa + gamma * q_max) - matriz[estado_ultimo_agente].direita)
+            matriz[estado_ultimo_agente].direita += alfa * ((recompensa + (gamma * q_max)) - matriz[estado_ultimo_agente].direita)
 
         return matriz
 
@@ -82,15 +81,17 @@ class Amongois:
 
     def iniciar_jogo(self):
         matriz = self.__carregador_matriz.obter_matriz()
-        ultimo_estado = '0000000'
+        for episode in range(3):
 
-        while True:
-            acao = self.__agente.obter_acao(matriz, ultimo_estado)
-            estado, recompensa = get_state_reward(self.__socket, acao)
-            matriz = self.__agente.q_learning(matriz, estado, ultimo_estado, acao, recompensa)
-            if recompensa == 300 :
-                break
-            ultimo_estado = estado
+            ultimo_estado = '0000000'
+            recompensa_ultimoEstado = -14
+
+            while recompensa_ultimoEstado != 300:
+                acao = self.__agente.obter_acao(matriz, ultimo_estado)
+                estado, recompensa = get_state_reward(self.__socket, acao)
+                matriz = self.__agente.q_learning(matriz, estado, ultimo_estado, acao, recompensa)
+                recompensa_ultimoEstado = recompensa
+                ultimo_estado = estado
             self.__carregador_matriz.atualizar_matriz(matriz)
 
 # Cliente.py
