@@ -1,5 +1,6 @@
-from random import randint
+import random
 from connection import connect, get_state_reward
+import numpy as np
 
 epsilon = 0.99
 alfa = 0.2 # Coeficiente de aprendizado
@@ -16,12 +17,13 @@ class AgenteQLearning:
     ACOES = ["left", "right", "jump"]
 
     def obter_acao(self, matriz: list[Estado], estado: str) -> str:
+        
         # Gerar um número aleatório para decidir entre explorar e explorar a política aprendida
-        exploracao = randint(0, 10)
+        exploracao = random.random()
         
         estado_agente = int(estado, 2)
 
-        if exploracao > epsilon * 10:
+        if exploracao < epsilon:
             valor_estado_agente = matriz[estado_agente]
             valor_acao = max(valor_estado_agente.esquerda, valor_estado_agente.direita, valor_estado_agente.pulo)
 
@@ -31,8 +33,8 @@ class AgenteQLearning:
                 return "right"
             return "jump"
 
-        # Se o valor de exploração for epsilon*10 ou menor, escolher uma ação aleatória entre left, right e jump
-        return AgenteQLearning.ACOES[randint(0, 2)]
+        # Se o valor de exploração  menor escolher uma ação aleatória entre left, right e jump
+        return AgenteQLearning.ACOES[np.random.randint(3)]
 
 
     def q_learning(self, matriz: list[Estado], estado: str, ultimo_estado: str, acao: str, recompensa: int) -> list[Estado]:
@@ -81,7 +83,7 @@ class Amongois:
 
     def iniciar_jogo(self):
         matriz = self.__carregador_matriz.obter_matriz()
-        for episode in range(3):
+        while(1):
 
             ultimo_estado = '0000000'
             recompensa_ultimoEstado = -14
