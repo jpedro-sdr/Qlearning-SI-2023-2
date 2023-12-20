@@ -1,5 +1,0 @@
-E-Greedy Search
-Alfa : decrescente
-EXplorar várias plataformas iniciais
-Executar várias vezes pra ter uma proporção de sucesso pra aferir se a tabela Q tá boa
-
