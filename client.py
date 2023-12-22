@@ -80,7 +80,7 @@ class Amongois:
         self.__agente = AgenteQLearning()
         self.__socket = connect(2037)
         self.epsilon_decay_rate = epsilon_decay_rate
-        self.epsilon = 0.99
+        self.epsilon = 0.1
 
     def iniciar_jogo(self):
         matriz = self.__carregador_matriz.obter_matriz()
@@ -99,7 +99,6 @@ class Amongois:
                 matriz = self.__agente.q_learning(matriz, estado, ultimo_estado, acao, recompensa)
                 recompensa_ultimoEstado = recompensa
                 ultimo_estado = estado
-                print(recompensa)
             self.__carregador_matriz.atualizar_matriz(matriz)
 
 # Cliente.py
