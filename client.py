@@ -1,10 +1,14 @@
 import random
 from connection import connect, get_state_reward
 import numpy as np
+import time
 
-epsilon = 0.99
-alfa = 0.2 # Coeficiente de aprendizado
-gamma = 0.9 # Fator de desconto
+tempo_maximo_segundos = 9000  # 2 horas
+tempo_inicio = time.time()
+
+#epsilon = 0.95
+alfa = 0.1 # Coeficiente de aprendizado
+gamma = 0.97 # Fator de desconto
 
 class Estado:
     def __init__(self, esquerda: str, direita: str, pulo: str):
@@ -16,14 +20,10 @@ class Estado:
 class AgenteQLearning:
     ACOES = ["left", "right", "jump"]
 
-    def obter_acao(self, matriz: list[Estado], estado: str) -> str:
-        
-        # Gerar um número aleatório para decidir entre explorar e explorar a política aprendida
-        exploracao = random.random()
+    def obter_acao(self, matriz: list[Estado], estado: str, epsilon: float) -> str:
         
         estado_agente = int(estado, 2)
-
-        if exploracao < epsilon:
+        if random.random() > epsilon:
             valor_estado_agente = matriz[estado_agente]
             valor_acao = max(valor_estado_agente.esquerda, valor_estado_agente.direita, valor_estado_agente.pulo)
 
@@ -46,7 +46,6 @@ class AgenteQLearning:
         # Obtenção dos valores Q máximos para o estado atual
         linha_estado = matriz[estado_agente]
         q_max = max(linha_estado.esquerda, linha_estado.direita, linha_estado.pulo)
-
         # Atualização da matriz Q com base na ação tomada, recompensa e valor Q máximo
         if acao == "jump":
             matriz[estado_ultimo_agente].pulo += alfa * ((recompensa + (gamma * q_max)) - matriz[estado_ultimo_agente].pulo)
@@ -59,7 +58,7 @@ class AgenteQLearning:
 
 
 class Matriz:
-    RESULTADO = './resultado.txt'
+    RESULTADO = './qtable.txt'
 
     def obter_matriz(self):
         with open(Matriz.RESULTADO, 'r') as arquivo:
@@ -76,24 +75,31 @@ class Matriz:
             arquivo.write(novos_estados)
 
 class Amongois:
-    def __init__(self):
+    def __init__(self, epsilon_decay_rate=0.00001):
         self.__carregador_matriz = Matriz()
         self.__agente = AgenteQLearning()
         self.__socket = connect(2037)
+        self.epsilon_decay_rate = epsilon_decay_rate
+        self.epsilon = 0.99
 
     def iniciar_jogo(self):
         matriz = self.__carregador_matriz.obter_matriz()
-        while(1):
+        while True:
+            if time.time() - tempo_inicio > tempo_maximo_segundos:
+                break
 
             ultimo_estado = '0000000'
             recompensa_ultimoEstado = -14
 
             while recompensa_ultimoEstado != 300:
-                acao = self.__agente.obter_acao(matriz, ultimo_estado)
+                # Decaimento de epsilon
+                self.epsilon = max(0.1, self.epsilon - self.epsilon_decay_rate)
+                acao = self.__agente.obter_acao(matriz, ultimo_estado, self.epsilon)
                 estado, recompensa = get_state_reward(self.__socket, acao)
                 matriz = self.__agente.q_learning(matriz, estado, ultimo_estado, acao, recompensa)
                 recompensa_ultimoEstado = recompensa
                 ultimo_estado = estado
+                print(recompensa)
             self.__carregador_matriz.atualizar_matriz(matriz)
 
 # Cliente.py
